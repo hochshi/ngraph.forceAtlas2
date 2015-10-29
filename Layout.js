@@ -40,13 +40,16 @@ function constant(graph, config, userSettings) {
         layoutLinksArray = [],
 
 
-        initNode = function (node) {
-
+        createnodeBody = function (node) {
             var nodeBody = generateRandomPosition();
             nodeBody.id = node.id;
-            layoutNodesArray.push(nodeBody);
-            layoutNodes[node.id] = nodeBody;
+            return nodeBody;
+        },
 
+        initNode = function (node) {
+          var nodeBody = initNode(node);
+          layoutNodesArray.push(nodeBody);
+          layoutNodes[node.id] = nodeBody;
         },
 
 
@@ -58,7 +61,7 @@ function constant(graph, config, userSettings) {
 
         onGraphChanged = function (changes) {
             console.warn('Not implemented');
-            /*for (var i = 0; i < changes.length; ++i) {
+            for (var i = 0; i < changes.length; ++i) {
              var change = changes[i];
              if (change.node) {
              if (change.changeType === 'add') {
@@ -74,11 +77,12 @@ function constant(graph, config, userSettings) {
              delete layoutLinks[change.link.id];
              }
              }
-             }*/
+             }
         };
 
 
     graph.forEachNode(initNode);
+
     graph.forEachLink(initLink);
 
     var degreeCentrality = centrality.degree(graph);

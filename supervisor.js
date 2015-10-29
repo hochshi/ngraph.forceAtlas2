@@ -55,6 +55,8 @@ Supervisor.prototype._init = function (graph, options) {
     this.ppn = 10;
     this.ppe = 3;
     this.config = {};
+    this.nIndex = {};
+    this.eIndex = {};
     this.shouldUseWorker =
         options.worker === false ? false : webWorkers;
     this.workerUrl = options.workerUrl;
@@ -63,6 +65,8 @@ Supervisor.prototype._init = function (graph, options) {
     this.started = false;
     this.running = false;
     this._pending = false;
+    this.changePending = false;
+    this.graphChanges = [];
 
     // Web worker or classic DOM events?
     if (this.shouldUseWorker) {
@@ -138,7 +142,8 @@ Supervisor.prototype._graphToByteArrays = function () {
         edges = this.graph.edges,
         nbytes = nodes.length * this.ppn,
         ebytes = edges.length * this.ppe,
-        nIndex = {},
+        nIndex = this.nIndex,
+        eIndex = this.eIndex,
         i,
         j,
         l;
@@ -156,6 +161,7 @@ Supervisor.prototype._graphToByteArrays = function () {
 
     // Iterate through edges
     for (i = j = 0, l = edges.length; i < l; i++) {
+        eIndex[edges[i].id] = j;
         this.edgesByteArray[j] = nIndex[edges[i].fromId];
         this.edgesByteArray[j + 1] = nIndex[edges[i].toId];
         this.edgesByteArray[j + 2] = edges[i].weight || 1;
@@ -374,6 +380,66 @@ Supervisor.prototype.forceUpdate = function () {
         this._needUpdate = true;
 };
 
+Supervisor.prototype.ensureEnoughNodesStorage = function() {
+  if ((1 + this.graph.nodes.length) * this.ppn >= this.nodesByteArray.byteLength) {
+    var extendedNodesByteArray = new Float32Array(this.nodesByteArray.byteLength * 2);
+    extendedNodesByteArray.set(this.nodesByteArray);
+    this.nodesByteArray = extendedNodesByteArray;
+  }
+};
+
+Supervisor.prototype.ensureEnoughEdgesStorage = function () {
+  if (( 1+ this.graph.edges.length)*this.ppe >= this.edgesByteArray.byteLength) {
+    var extendedEdgesByteArray = new Float32Array(this.edgesByteArray.byteLength * 2);
+    extendedEdgesByteArray.set(this.edgesByteArray);
+    this.edgesByteArray = extendedEdgesByteArray;
+  }
+};
+
+Supervisor.prototype.removeNode = function(nodeBody) {
+
+};
+
+Supervisor.prototype.addNode = function(nodeBody) {
+
+};
+
+Supervisor.prototype.removeEdge = function(link) {
+
+};
+
+Supervisor.prototype.addEdge = function(link) {
+
+};
+
+Supervisor.prototype.onGraphChanged = function(changes) {
+  if (this._pending) {
+    this.graphChanges = this.graphChanges.concat(changes);
+    this.changePending = true;
+  } else {
+    this.applyGraphChanges();
+  }
+};
+
+Supervisor.prototype.applyGraphChanges = function() {
+  for (var i=0; i< this.graphChanges.length; i++) {
+    var change = changes[i];
+    if (change.nodeBody) {
+      if (change.changeType === 'add') {
+        this.addNode(change.nodeBody)
+      } else {
+        this.removeNode(change.nodeBody)
+      }
+    }
+    if (change.link) {
+      if (change.changeType === 'add') {
+        this.addEdge(change.link);
+      } else {
+        this.removeEdge(change.link);
+      }
+    }
+  }
+};
 
 module.exports = Supervisor;
 
